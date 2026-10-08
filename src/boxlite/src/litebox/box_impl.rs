@@ -1841,6 +1841,7 @@ mod tests {
         let runtime = RuntimeImpl::new_for_test(BoxliteOptions {
             home_dir: temp_dir.path().to_path_buf(),
             image_registries: vec![],
+            ..Default::default()
         })
         .expect("create runtime");
         let (guest_session, server) = start_stub_guest(gate).await;
@@ -2081,6 +2082,7 @@ mod tests {
         let runtime = RuntimeImpl::new_for_test(BoxliteOptions {
             home_dir: temp_dir.path().to_path_buf(),
             image_registries: vec![],
+            ..Default::default()
         })
         .expect("create runtime");
 
@@ -2252,6 +2254,7 @@ mod tests {
         let mut runtime = RuntimeImpl::new_for_test(BoxliteOptions {
             home_dir: temp_dir.path().to_path_buf(),
             image_registries: vec![],
+            ..Default::default()
         })
         .expect("create runtime");
         Arc::get_mut(&mut runtime)
@@ -2303,6 +2306,7 @@ mod tests {
         let runtime = RuntimeImpl::new_for_test(BoxliteOptions {
             home_dir: temp_dir.path().to_path_buf(),
             image_registries: vec![],
+            ..Default::default()
         })
         .expect("create runtime");
         let requested = PortSpec {
@@ -2388,6 +2392,7 @@ mod tests {
         let runtime = RuntimeImpl::new_for_test(BoxliteOptions {
             home_dir: temp_dir.path().to_path_buf(),
             image_registries: vec![],
+            ..Default::default()
         })
         .expect("create runtime");
 
@@ -2431,6 +2436,7 @@ mod tests {
         let runtime = RuntimeImpl::new_for_test(BoxliteOptions {
             home_dir: temp_dir.path().to_path_buf(),
             image_registries: vec![],
+            ..Default::default()
         })
         .expect("create runtime");
 

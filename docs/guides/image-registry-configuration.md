@@ -72,7 +72,7 @@ Use the `--config` flag to specify your configuration file:
 boxlite --config ./project-config.json run alpine
 ```
 
-**Important**: If you specify a config file with `--config` and the file does not exist or is invalid, the command will fail with an error.
+**Important**: If you specify a config file with `--config` and the file does not exist, is invalid, or contains an unknown key, the command will fail with an error.
 
 ### 3. Command line flags
 
@@ -197,3 +197,32 @@ def load_boxlite_options(config_path: str):
 # Use it
 runtime = boxlite.Boxlite(load_boxlite_options("./config.json"))
 ```
+
+## Pulling through a proxy
+
+BoxLite pulls images from your own process, not from a daemon, so a proxy set for the
+Docker daemon (for example in its systemd unit) does not apply. By default the runtime
+uses `HTTPS_PROXY`, `HTTP_PROXY`, and `NO_PROXY` from its own environment.
+
+To configure the proxy explicitly, add `registry_proxy` to the configuration file, or set
+`BoxliteOptions::registry_proxy` in Rust:
+
+```json
+{
+  "registry_proxy": {
+    "https_proxy": "http://proxy.corp.example:3128",
+    "no_proxy": "localhost,127.0.0.1,.corp.example"
+  }
+}
+```
+
+Two rules differ from Docker: once `registry_proxy` sets a proxy URL, the proxy
+environment variables are ignored, and `no_proxy` takes `.corp.example` rather than
+`*.corp.example`, without ports.
+See [`registry_proxy`](../reference/configuration.md#registry_proxy) for the full rules.
+
+The Python, Node.js, Go, and C SDKs do not expose `registry_proxy` yet. Under them, set
+`HTTPS_PROXY` and `NO_PROXY` in the process environment before creating the runtime.
+
+Programs inside a box do not inherit this proxy; pass `HTTPS_PROXY` and related variables
+to the box with `env` if they need it.
