@@ -98,7 +98,7 @@ impl ImageManager {
     /// * `images_dir` - Directory for image cache
     /// * `db` - Database for image index
     /// * `image_registries` - Registry transport, TLS, auth, and search settings
-    /// * `registry_proxy` - Proxy for registry requests
+    /// * `registry_proxy` - Proxy and extra CA for registry requests
     pub fn new(
         images_dir: PathBuf,
         db: Database,

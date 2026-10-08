@@ -50,7 +50,7 @@ pub struct BoxliteOptions {
     /// ```
     #[serde(default)]
     pub image_registries: Vec<ImageRegistry>,
-    /// Proxy for image pulls.
+    /// Proxy and extra trusted CA for image pulls.
     ///
     /// `None` (default) keeps reading `HTTPS_PROXY`, `HTTP_PROXY`, `ALL_PROXY`,
     /// and `NO_PROXY` from the process environment. Box traffic never uses it.
@@ -71,6 +71,9 @@ pub struct RegistryProxy {
     pub https_proxy: Option<String>,
     /// Comma-separated hosts, domains, IPs, or CIDRs that bypass the proxy.
     pub no_proxy: Option<String>,
+    /// PEM file of CA certificates trusted in addition to the bundled roots,
+    /// such as a TLS-intercepting proxy's CA. Read once at runtime creation.
+    pub ca_cert_path: Option<PathBuf>,
 }
 
 impl fmt::Debug for RegistryProxy {
@@ -80,6 +83,7 @@ impl fmt::Debug for RegistryProxy {
             .field("http_proxy", &redact(&self.http_proxy))
             .field("https_proxy", &redact(&self.https_proxy))
             .field("no_proxy", &self.no_proxy)
+            .field("ca_cert_path", &self.ca_cert_path)
             .finish()
     }
 }
