@@ -211,14 +211,15 @@ To configure the proxy explicitly, add `registry_proxy` to the configuration fil
 {
   "registry_proxy": {
     "https_proxy": "http://proxy.corp.example:3128",
-    "no_proxy": "localhost,127.0.0.1,.corp.example"
+    "no_proxy": "localhost,127.0.0.1,.corp.example",
+    "ca_cert_path": "/etc/ssl/certs/corp-proxy-ca.pem"
   }
 }
 ```
 
-Two rules differ from Docker: once `registry_proxy` sets a proxy URL, the proxy
-environment variables are ignored, and `no_proxy` takes `.corp.example` rather than
-`*.corp.example`, without ports.
+If the proxy intercepts TLS, point `ca_cert_path` at its CA certificate. Two rules differ
+from Docker: once `registry_proxy` sets a proxy URL, the proxy environment variables are
+ignored, and `no_proxy` takes `.corp.example` rather than `*.corp.example`, without ports.
 See [`registry_proxy`](../reference/configuration.md#registry_proxy) for the full rules.
 
 The Python, Node.js, Go, and C SDKs do not expose `registry_proxy` yet. Under them, set

@@ -86,7 +86,7 @@ pub struct ImageStore {
     registries: Vec<String>,
     /// Registry transport, TLS, auth, and search settings.
     image_registries: Vec<ImageRegistry>,
-    /// Proxy settings shared by every registry client.
+    /// Proxy and extra CA settings shared by every registry client.
     proxy: RegistryClientProxy,
 }
 
@@ -103,7 +103,7 @@ impl ImageStore {
     /// * `images_dir` - Directory for image cache
     /// * `db` - Database for image index
     /// * `image_registries` - Registry transport, TLS, auth, and search settings
-    /// * `registry_proxy` - Proxy for registry requests
+    /// * `registry_proxy` - Proxy and extra CA for registry requests
     pub fn new(
         images_dir: PathBuf,
         db: Database,
@@ -1017,7 +1017,7 @@ impl ImageStore {
         let config =
             client_config_for_registry(reference.registry(), &self.image_registries, &self.proxy);
         // `Client::new` would log the error and fall back to a default client,
-        // silently dropping the proxy, transport, and TLS settings.
+        // silently dropping the proxy, CA, transport, and TLS settings.
         oci_client::Client::try_from(config).map_err(|e| {
             BoxliteError::Config(format!(
                 "failed to create registry client: {}",

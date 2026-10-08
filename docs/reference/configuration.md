@@ -366,7 +366,7 @@ runtime = boxlite.Boxlite(boxlite.Options(home_dir="/custom/path"))
 
 ### `registry_proxy`
 
-Proxy for the registry requests the runtime makes while pulling
+Proxy and extra trusted CA for the registry requests the runtime makes while pulling
 images. Set it as `BoxliteOptions::registry_proxy` in Rust or in the CLI's `--config`
 file; the Python, Node.js, Go, and C SDKs do not expose it yet and use only the
 environment variables below. Traffic from inside a box never uses it; pass a box its own
@@ -380,13 +380,15 @@ proxy variables with `env`.
 | `https_proxy` | Proxy URL for HTTPS registries, such as `http://proxy.corp.example:3128`. |
 | `http_proxy` | Proxy URL for registries with `transport: "http"`. |
 | `no_proxy` | Comma-separated hosts, domains, IPs, or CIDRs that bypass the proxy. |
+| `ca_cert_path` | PEM file of CA certificates to trust in addition to the bundled roots. |
 
 **Example (`--config` JSON):**
 ```json
 {
   "registry_proxy": {
     "https_proxy": "http://proxy.corp.example:3128",
-    "no_proxy": "localhost,127.0.0.1,.corp.example"
+    "no_proxy": "localhost,127.0.0.1,.corp.example",
+    "ca_cert_path": "/etc/ssl/certs/corp-proxy-ca.pem"
   }
 }
 ```
@@ -401,8 +403,13 @@ proxy variables with `env`.
   `corp.example` and `.corp.example` both match the domain and its subdomains, `*` alone
   matches every host, and IP addresses and CIDRs are allowed. `*.corp.example` and
   `host:port` entries match nothing, and `localhost` is proxied unless listed.
-- An invalid setting, such as a misspelled URL scheme, fails runtime creation instead of
-  letting pulls bypass the proxy.
+- `ca_cert_path` is read once, when the runtime is created; a relative path resolves
+  against the process working directory. Pulls otherwise trust only BoxLite's bundled
+  Mozilla roots, not the system store, so a proxy that intercepts TLS, or an `https://`
+  proxy with a private certificate, needs its CA here. The CA also applies when the proxy
+  URL comes from the environment.
+- An invalid setting, such as a misspelled URL scheme or a CA file without certificates,
+  fails runtime creation instead of letting pulls bypass the proxy.
 
 ## Environment variables
 

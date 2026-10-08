@@ -139,8 +139,8 @@ pub struct BoxliteOptions {
     /// Registry transport, TLS, search, and auth configuration
     pub image_registries: Vec<ImageRegistry>,
 
-    /// Proxy for image pulls; `None` reads the proxy environment
-    /// variables
+    /// Proxy and extra trusted CA for image pulls; `None` reads the
+    /// proxy environment variables
     pub registry_proxy: Option<RegistryProxy>,
 }
 
@@ -164,6 +164,8 @@ pub struct RegistryProxy {
     pub https_proxy: Option<String>,
     /// Comma-separated hosts, domains, IPs, or CIDRs that bypass the proxy.
     pub no_proxy: Option<String>,
+    /// PEM file of CA certificates to trust in addition to the bundled roots.
+    pub ca_cert_path: Option<PathBuf>,
 }
 ```
 
@@ -198,6 +200,7 @@ let options = BoxliteOptions {
     registry_proxy: Some(RegistryProxy {
         https_proxy: Some("http://proxy.corp.example:3128".into()),
         no_proxy: Some("localhost,127.0.0.1,.corp.example".into()),
+        ca_cert_path: Some("/etc/ssl/certs/corp-proxy-ca.pem".into()),
         ..Default::default()
     }),
     ..Default::default()
@@ -205,7 +208,7 @@ let options = BoxliteOptions {
 ```
 
 See [`registry_proxy`](../configuration.md#registry_proxy) for precedence over the
-environment and `no_proxy` matching.
+environment, `no_proxy` matching, and the CA file.
 
 ---
 
