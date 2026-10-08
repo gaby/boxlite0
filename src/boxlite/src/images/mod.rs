@@ -4,6 +4,7 @@ mod config;
 mod image_disk;
 mod manager;
 mod object;
+mod registry_proxy;
 mod storage;
 mod store;
 

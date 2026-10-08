@@ -58,6 +58,7 @@ async fn test_clone_produces_independent_box() {
     let runtime = BoxliteRuntime::new(BoxliteOptions {
         home_dir: home.path.clone(),
         image_registries: common::test_registries(),
+        ..Default::default()
     })
     .expect("create runtime");
     let source = create_stopped_box(&runtime).await;
@@ -87,6 +88,7 @@ async fn test_export_import_roundtrip() {
     let runtime = BoxliteRuntime::new(BoxliteOptions {
         home_dir: home.path.clone(),
         image_registries: common::test_registries(),
+        ..Default::default()
     })
     .expect("create runtime");
     let source = create_stopped_box(&runtime).await;
@@ -127,6 +129,7 @@ async fn test_export_import_preserves_box_options() {
     let runtime = BoxliteRuntime::new(BoxliteOptions {
         home_dir: home.path.clone(),
         image_registries: common::test_registries(),
+        ..Default::default()
     })
     .expect("create runtime");
 
@@ -164,6 +167,7 @@ async fn test_clone_running_box() {
     let runtime = BoxliteRuntime::new(BoxliteOptions {
         home_dir: home.path.clone(),
         image_registries: common::test_registries(),
+        ..Default::default()
     })
     .expect("create runtime");
     let source = create_running_box(&runtime, "clone-src").await;
@@ -214,6 +218,7 @@ async fn test_export_running_box() {
     let runtime = BoxliteRuntime::new(BoxliteOptions {
         home_dir: home.path.clone(),
         image_registries: common::test_registries(),
+        ..Default::default()
     })
     .expect("create runtime");
     let source = create_running_box(&runtime, "export-running").await;
@@ -266,6 +271,7 @@ async fn test_export_import_running_box_roundtrip() {
     let runtime = BoxliteRuntime::new(BoxliteOptions {
         home_dir: home.path.clone(),
         image_registries: common::test_registries(),
+        ..Default::default()
     })
     .expect("create runtime");
     let source = create_running_box(&runtime, "roundtrip-running").await;
@@ -330,6 +336,7 @@ async fn test_clone_snapshot_isolation() {
     let runtime = BoxliteRuntime::new(BoxliteOptions {
         home_dir: home.path.clone(),
         image_registries: common::test_registries(),
+        ..Default::default()
     })
     .expect("create runtime");
     let source = create_running_box(&runtime, "isolation-src").await;
@@ -386,6 +393,7 @@ async fn test_clone_10x_benchmark() {
     let runtime = BoxliteRuntime::new(BoxliteOptions {
         home_dir: home.path.clone(),
         image_registries: common::test_registries(),
+        ..Default::default()
     })
     .expect("create runtime");
     let source = create_stopped_box(&runtime).await;
@@ -438,6 +446,7 @@ async fn test_export_under_write_pressure() {
     let runtime = BoxliteRuntime::new(BoxliteOptions {
         home_dir: home.path.clone(),
         image_registries: common::test_registries(),
+        ..Default::default()
     })
     .expect("create runtime");
     let source = create_running_box(&runtime, "write-stress").await;

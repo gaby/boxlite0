@@ -15,8 +15,10 @@
 
 use crate::db::{CachedImage, Database, ImageIndexStore};
 use crate::images::manager::{ImageManifest, LayerInfo};
+use crate::images::registry_proxy::RegistryClientProxy;
 use crate::images::storage::ImageStorage;
-use crate::runtime::options::{ImageRegistry, ImageRegistryAuth, RegistryTransport};
+use crate::runtime::options::{ImageRegistry, ImageRegistryAuth, RegistryProxy, RegistryTransport};
+use boxlite_shared::errors::with_causes;
 use boxlite_shared::{BoxliteError, BoxliteResult};
 use oci_client::Reference;
 use oci_client::client::{ClientConfig, ClientProtocol};
@@ -68,7 +70,7 @@ impl ImageStoreInner {
 /// # Example
 ///
 /// ```ignore
-/// let store = Arc::new(ImageStore::new(images_dir, db, vec![])?);
+/// let store = Arc::new(ImageStore::new(images_dir, db, vec![], None)?);
 ///
 /// // Pull image (thread-safe, releases lock during download)
 /// let manifest = store.pull("python:alpine").await?;
@@ -84,6 +86,8 @@ pub struct ImageStore {
     registries: Vec<String>,
     /// Registry transport, TLS, auth, and search settings.
     image_registries: Vec<ImageRegistry>,
+    /// Proxy settings shared by every registry client.
+    proxy: RegistryClientProxy,
 }
 
 impl std::fmt::Debug for ImageStore {
@@ -99,12 +103,15 @@ impl ImageStore {
     /// * `images_dir` - Directory for image cache
     /// * `db` - Database for image index
     /// * `image_registries` - Registry transport, TLS, auth, and search settings
+    /// * `registry_proxy` - Proxy for registry requests
     pub fn new(
         images_dir: PathBuf,
         db: Database,
         image_registries: Vec<ImageRegistry>,
+        registry_proxy: Option<RegistryProxy>,
     ) -> BoxliteResult<Self> {
         validate_image_registries(&image_registries)?;
+        let proxy = RegistryClientProxy::load(registry_proxy)?;
 
         let inner = ImageStoreInner::new(images_dir, db)?;
         let registries = search_registries(&image_registries);
@@ -112,6 +119,7 @@ impl ImageStore {
             inner: RwLock::new(inner),
             registries,
             image_registries,
+            proxy,
         })
     }
 
@@ -571,7 +579,7 @@ impl ImageStore {
     /// This method handles the actual network I/O - manifest pull, layer download, etc.
     /// Lock is released during network I/O to allow other operations.
     async fn pull_from_registry(&self, reference: &Reference) -> BoxliteResult<ImageManifest> {
-        let client = self.client_for(reference);
+        let client = self.client_for(reference)?;
         let auth = registry_auth_for(reference.registry(), &self.image_registries);
 
         // Step 1: Pull manifest (no lock needed)
@@ -1005,11 +1013,17 @@ impl ImageStore {
         Ok(())
     }
 
-    fn client_for(&self, reference: &Reference) -> oci_client::Client {
-        oci_client::Client::new(client_config_for_registry(
-            reference.registry(),
-            &self.image_registries,
-        ))
+    fn client_for(&self, reference: &Reference) -> BoxliteResult<oci_client::Client> {
+        let config =
+            client_config_for_registry(reference.registry(), &self.image_registries, &self.proxy);
+        // `Client::new` would log the error and fall back to a default client,
+        // silently dropping the proxy, transport, and TLS settings.
+        oci_client::Client::try_from(config).map_err(|e| {
+            BoxliteError::Config(format!(
+                "failed to create registry client: {}",
+                with_causes(&e)
+            ))
+        })
     }
 
     /// Parse OCI image manifest from file path.
@@ -1041,7 +1055,11 @@ impl ImageStore {
     }
 }
 
-fn client_config_for_registry(host: &str, image_registries: &[ImageRegistry]) -> ClientConfig {
+fn client_config_for_registry(
+    host: &str,
+    image_registries: &[ImageRegistry],
+    proxy: &RegistryClientProxy,
+) -> ClientConfig {
     let registry = image_registries
         .iter()
         .find(|registry| registry.host == host);
@@ -1051,11 +1069,13 @@ fn client_config_for_registry(host: &str, image_registries: &[ImageRegistry]) ->
         _ => ClientProtocol::Https,
     };
 
-    ClientConfig {
+    let mut config = ClientConfig {
         protocol,
         accept_invalid_certificates: registry.is_some_and(|registry| registry.skip_verify),
         ..Default::default()
-    }
+    };
+    proxy.apply(&mut config);
+    config
 }
 
 fn registry_auth_for(host: &str, image_registries: &[ImageRegistry]) -> OciRegistryAuth {
@@ -1201,7 +1221,8 @@ mod tests {
         ];
 
         for (host, protocol, accept_invalid_certificates) in cases {
-            let config = client_config_for_registry(host, &registries);
+            let config =
+                client_config_for_registry(host, &registries, &RegistryClientProxy::default());
             assert_eq!(config.protocol, protocol, "host={host}");
             assert_eq!(
                 config.accept_invalid_certificates, accept_invalid_certificates,
@@ -1404,7 +1425,7 @@ mod tests {
 
         // Create store
         let db = Database::open(&db_path).unwrap();
-        let store = ImageStore::new(images_dir.clone(), db, vec![]).unwrap();
+        let store = ImageStore::new(images_dir.clone(), db, vec![], None).unwrap();
 
         // Load from local
         let manifest = store.load_from_local(bundle_dir.clone()).await.unwrap();
@@ -1428,7 +1449,7 @@ mod tests {
 
         // Create store
         let db = Database::open(&db_path).unwrap();
-        let store = ImageStore::new(images_dir.clone(), db, vec![]).unwrap();
+        let store = ImageStore::new(images_dir.clone(), db, vec![], None).unwrap();
 
         // Load from local
         let _manifest = store.load_from_local(bundle_dir.clone()).await.unwrap();
@@ -1463,7 +1484,7 @@ mod tests {
 
         // Create store
         let db = Database::open(&db_path).unwrap();
-        let store = ImageStore::new(images_dir.clone(), db, vec![]).unwrap();
+        let store = ImageStore::new(images_dir.clone(), db, vec![], None).unwrap();
 
         // Load should fail
         let result = store.load_from_local(bundle_dir).await;
@@ -1489,7 +1510,7 @@ mod tests {
 
         // Create store
         let db = Database::open(&db_path).unwrap();
-        let store = ImageStore::new(images_dir.clone(), db, vec![]).unwrap();
+        let store = ImageStore::new(images_dir.clone(), db, vec![], None).unwrap();
 
         // Load should fail
         let result = store.load_from_local(bundle_dir).await;
@@ -1688,7 +1709,7 @@ mod tests {
 
     fn store_with_tmp(temp_dir: &Path) -> ImageStore {
         let db = Database::open(&temp_dir.join("test.db")).unwrap();
-        ImageStore::new(temp_dir.join("images"), db, vec![]).unwrap()
+        ImageStore::new(temp_dir.join("images"), db, vec![], None).unwrap()
     }
 
     /// Store `bytes` as a content-addressed config blob and return the digest
